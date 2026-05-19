@@ -7,17 +7,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type Service interface {
-	Close() error
-	Exec(query string, param ...any) (sql.Result, error)
-	Query(query string, args ...any) (*sql.Rows, error)
-}
-
 type service struct {
 	db *sql.DB
 }
 
-func NewMySQLConnection() Service {
+func NewMySQLConnection() *sql.DB {
 	dbPath := "sqlite.db"
 
 	connection, err := sql.Open("sqlite", dbPath)
@@ -31,7 +25,7 @@ func NewMySQLConnection() Service {
 
 	dbInstance.initDatabase()
 
-	return dbInstance
+	return connection
 }
 
 func (s *service) Close() error {

@@ -1,0 +1,19 @@
+meta {
+  name: UpdateUser
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:8080/user/5
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "John Doz",
+    "email": "john.doz@example.com"
+  }
+}
+​

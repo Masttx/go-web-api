@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	"projetoinfiel/internal/api"
 	"projetoinfiel/internal/database"
 	"projetoinfiel/internal/repositories"
 )
@@ -14,13 +17,13 @@ func main() {
 
 	userRepository := repositories.NewUserRepository(db)
 
-	//_, err := userRepository.Create("Mateus", "askdasdk@gmsadasdl")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	users, err := userRepository.List()
-	if err != nil {
-		fmt.Println(err)
+	userAPI := api.NewUserAPI(*userRepository)
+
+	http.HandleFunc("POST /user", userAPI.Create)
+	http.HandleFunc("PUT /user/{id}", userAPI.Update)
+	http.HandleFunc("GET /user/{id}", userAPI.Read)
+
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("error starting server: %v", err)
 	}
-	fmt.Println(users)
 }
