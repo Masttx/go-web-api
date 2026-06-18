@@ -34,10 +34,16 @@ func (s *service) Close() error {
 
 func (s *service) initDatabase() {
 	createUserQuery := "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,email TEXT NOT NULL)"
+	s.createTable("Users", createUserQuery)
 
-	_, err := s.db.Exec(createUserQuery)
+	createAreaQuery := "CREATE TABLE IF NOT EXISTS areas (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,description TEXT)"
+	s.createTable("Areas", createAreaQuery)
+}
+
+func (s *service) createTable(name, createTableQuery string) {
+	_, err := s.db.Exec(createTableQuery)
 	if err != nil {
-		log.Println("Nao foi possivel criar a tabela")
+		log.Println("Nao foi possivel criar a tabela: " + name)
 	}
 }
 
