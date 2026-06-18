@@ -33,11 +33,15 @@ func (s *service) Close() error {
 }
 
 func (s *service) initDatabase() {
-	createUserQuery := "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,email TEXT NOT NULL)"
+	createAreaQuery := `CREATE TABLE IF NOT EXISTS areas (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,description TEXT)`
+	s.createTable("Areas", createAreaQuery)
+
+	createUserQuery := `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,
+	email TEXT NOT NULL)`
 	s.createTable("Users", createUserQuery)
 
-	createAreaQuery := "CREATE TABLE IF NOT EXISTS areas (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,description TEXT)"
-	s.createTable("Areas", createAreaQuery)
+	createAreaUserQuery := `CREATE TABLE IF NOT EXISTS area_users (area_id INTEGER REFERENCES area(id), user_id INTEGER REFERENCES user(id)`
+	s.createTable("Area_Users", createAreaUserQuery)
 }
 
 func (s *service) createTable(name, createTableQuery string) {

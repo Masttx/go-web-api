@@ -29,6 +29,11 @@ type UpdateUserReq struct {
 	Email string `json:"email"`
 }
 
+type UpdateUserAreaReq struct {
+	ID     int64 `param:"id"`
+	AreaID int64 `json:"area_id"`
+}
+
 type CreateUserReq struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
@@ -123,6 +128,71 @@ func (r *UserAPI) Read(writer http.ResponseWriter, request *http.Request) {
 		Name:  user.Name,
 		Email: user.Email,
 	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusCreated)
+	json.NewEncoder(writer).Encode(response)
+}
+
+func (r *UserAPI) UpdateUserArea(writer http.ResponseWriter, request *http.Request) {
+	req := new(UpdateUserAreaReq)
+
+	err := json.NewDecoder(request.Body).Decode(&req)
+	if err != nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(writer).Encode(err)
+
+		return
+	}
+
+	idStr := request.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid user id"})
+
+		return
+	}
+	req.ID = id
+
+	err = r.userRepository.UpdateUserArea(req.ID, req.AreaID)
+	if err != nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(writer).Encode(err)
+
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusCreated)
+	json.NewEncoder(writer).Encode(true)
+}
+
+func (r *UserAPI) ListByArea(writer http.ResponseWriter, request *http.Request) {
+	idStr := request.PathValue("area_id")
+
+	areaID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid area_id"})
+
+		return
+	}
+
+	users, err := r.userRepository.ListByArea(areaID)
+	if err != nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()})
+
+		return
+	}
+
+	response := users
 
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusCreated)
