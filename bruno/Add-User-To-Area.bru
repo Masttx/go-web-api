@@ -1,0 +1,16 @@
+meta {
+  name: Add-User-To-Area
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:8080/area/1/user/1
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -40,7 +40,7 @@ func (s *service) initDatabase() {
 	email TEXT NOT NULL)`
 	s.createTable("Users", createUserQuery)
 
-	createAreaUserQuery := `CREATE TABLE IF NOT EXISTS area_users (area_id INTEGER REFERENCES area(id), user_id INTEGER REFERENCES user(id)`
+	createAreaUserQuery := `CREATE TABLE IF NOT EXISTS area_users (area_id INTEGER REFERENCES area(id), user_id INTEGER REFERENCES user(id))`
 	s.createTable("Area_Users", createAreaUserQuery)
 }
 
@@ -48,6 +48,7 @@ func (s *service) createTable(name, createTableQuery string) {
 	_, err := s.db.Exec(createTableQuery)
 	if err != nil {
 		log.Println("Nao foi possivel criar a tabela: " + name)
+		panic(err)
 	}
 }
 

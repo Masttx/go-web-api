@@ -46,6 +46,7 @@ func (r *UserRepository) List() ([]types.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error to insert user: %v", err)
 	}
+	defer rows.Close()
 
 	var users []types.User
 	for rows.Next() {
@@ -110,6 +111,7 @@ func (r *UserRepository) ListByArea(areaId int64) ([]types.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error to insert user: %v", err)
 	}
+	defer rows.Close()
 
 	var users []types.User
 	for rows.Next() {

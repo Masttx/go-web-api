@@ -8,12 +8,14 @@ import (
 )
 
 type UserAPI struct {
-	userRepository repositories.UserRepository
+	userRepository     repositories.UserRepository
+	areaUserRepository repositories.AreaUserRepository
 }
 
-func NewUserAPI(userRepository repositories.UserRepository) *UserAPI {
+func NewUserAPI(userRepository repositories.UserRepository, areaUserRepository repositories.AreaUserRepository) *UserAPI {
 	return &UserAPI{
-		userRepository: userRepository,
+		userRepository:     userRepository,
+		areaUserRepository: areaUserRepository,
 	}
 }
 
@@ -37,6 +39,10 @@ type UpdateUserAreaReq struct {
 type CreateUserReq struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
+}
+
+type ListAreaByUsersReq struct {
+	AreaID int64 `param:"area_id"`
 }
 
 func (r *UserAPI) Create(writer http.ResponseWriter, request *http.Request) {
@@ -134,56 +140,19 @@ func (r *UserAPI) Read(writer http.ResponseWriter, request *http.Request) {
 	json.NewEncoder(writer).Encode(response)
 }
 
-func (r *UserAPI) UpdateUserArea(writer http.ResponseWriter, request *http.Request) {
-	req := new(UpdateUserAreaReq)
+func (r *UserAPI) ListAreaByUsers(writer http.ResponseWriter, request *http.Request) {
+	idStr := request.PathValue("user_id")
 
-	err := json.NewDecoder(request.Body).Decode(&req)
+	user_id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(err)
+		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid users id"})
 
 		return
 	}
 
-	idStr := request.PathValue("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid user id"})
-
-		return
-	}
-	req.ID = id
-
-	err = r.userRepository.UpdateUserArea(req.ID, req.AreaID)
-	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(err)
-
-		return
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(true)
-}
-
-func (r *UserAPI) ListByArea(writer http.ResponseWriter, request *http.Request) {
-	idStr := request.PathValue("area_id")
-
-	areaID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid area_id"})
-
-		return
-	}
-
-	users, err := r.userRepository.ListByArea(areaID)
+	users, err := r.areaUserRepository.ListAreasByUser(user_id)
 	if err != nil {
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusInternalServerError)
@@ -192,9 +161,7 @@ func (r *UserAPI) ListByArea(writer http.ResponseWriter, request *http.Request) 
 		return
 	}
 
-	response := users
-
 	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(response)
+	writer.WriteHeader(http.StatusOK)
+	json.NewEncoder(writer).Encode(users)
 }

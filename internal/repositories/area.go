@@ -46,6 +46,7 @@ func (r *AreaRepository) List() ([]types.Area, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error to insert areas: %v", err)
 	}
+	defer rows.Close()
 
 	var areas []types.Area
 	for rows.Next() {
