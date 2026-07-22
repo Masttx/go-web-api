@@ -1,10 +1,11 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"projetoinfiel/internal/repositories"
 	"strconv"
+
+	"github.com/labstack/echo/v4"
 )
 
 type UserAPI struct {
@@ -45,88 +46,56 @@ type ListAreaByUsersReq struct {
 	AreaID int64 `param:"area_id"`
 }
 
-func (r *UserAPI) Create(writer http.ResponseWriter, request *http.Request) {
+func (r *UserAPI) Create(c echo.Context) error {
 	req := new(CreateUserReq)
 
-	err := json.NewDecoder(request.Body).Decode(&req)
+	err := c.Bind(req)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(err)
-
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
 	userCreated, err := r.userRepository.Create(req.Name, req.Email)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(err)
-
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(userCreated)
+	return c.JSON(http.StatusCreated, userCreated)
 }
 
-func (r *UserAPI) Update(writer http.ResponseWriter, request *http.Request) {
+func (r *UserAPI) Update(c echo.Context) error {
 	req := new(UpdateUserReq)
 
-	err := json.NewDecoder(request.Body).Decode(&req)
+	err := c.Bind(req)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(err)
-
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
-	idStr := request.PathValue("id")
+	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid user id"})
-
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid user id"})
 	}
 	req.ID = id
 
 	err = r.userRepository.Update(req.ID, req.Name, req.Email)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(err)
-
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(true)
+	return c.JSON(http.StatusCreated, true)
 }
 
-func (r *UserAPI) Read(writer http.ResponseWriter, request *http.Request) {
-	idStr := request.PathValue("id")
+func (r *UserAPI) Read(c echo.Context) error {
+	idStr := c.Param("id")
 
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid user id"})
-
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid user id"})
 	}
 
 	user, err := r.userRepository.Read(id)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(err)
-
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	response := ReadUserResponse{
@@ -135,33 +104,21 @@ func (r *UserAPI) Read(writer http.ResponseWriter, request *http.Request) {
 		Email: user.Email,
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(response)
+	return c.JSON(http.StatusCreated, response)
 }
 
-func (r *UserAPI) ListAreaByUsers(writer http.ResponseWriter, request *http.Request) {
-	idStr := request.PathValue("user_id")
+func (r *UserAPI) ListAreaByUsers(c echo.Context) error {
+	idStr := c.Param("user_id")
 
 	user_id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid users id"})
-
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid users id"})
 	}
 
 	users, err := r.areaUserRepository.ListAreasByUser(user_id)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()})
-
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-	json.NewEncoder(writer).Encode(users)
+	return c.JSON(http.StatusOK, users)
 }

@@ -1,0 +1,23 @@
+meta {
+  name: Update Area
+  type: http
+  seq: 2
+}
+
+patch {
+  url: http://localhost:8080/area/1
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Engenharia e Inovação",
+    "description": "Setor atualizado de desenvolvimento e tecnologia"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net/http"
 	"projetoinfiel/internal/api"
 	"projetoinfiel/internal/database"
 	"projetoinfiel/internal/repositories"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
@@ -22,21 +23,24 @@ func main() {
 	areaAPI := api.NewAreaAPI(*areaRepository, *areaUserRepository)
 	userAPI := api.NewUserAPI(*userRepository, *areaUserRepository)
 
-	http.HandleFunc("POST /area", areaAPI.Create)
-	http.HandleFunc("PATCH /area/{id}", areaAPI.Update)
-	http.HandleFunc("GET /area/{id}", areaAPI.Read)
+	e := echo.New()
 
-	http.HandleFunc("POST /area/{area_id}/user/{user_id}", areaAPI.AddUser)
-	http.HandleFunc("DELETE /area/{area_id}/user/{user_id}", areaAPI.DeleteUser)
-	http.HandleFunc("GET /user/{user_id}/list-areas", userAPI.ListAreaByUsers)
-	http.HandleFunc("GET /area/{area_id}/list-users", areaAPI.ListUsersByArea)
+	// Adiciona middleware de log e recuperação
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 
-	http.HandleFunc("POST /user", userAPI.Create)
-	http.HandleFunc("PATCH /user/{id}", userAPI.Update)
-	http.HandleFunc("GET /user/{id}", userAPI.Read)
-	//http.HandleFunc("PATCH /user/area/{id}", userAPI.UpdateUserArea)
+	e.POST("/area", areaAPI.Create)
+	e.PATCH("/area/:id", areaAPI.Update)
+	e.GET("/area/:id", areaAPI.Read)
 
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatalf("error starting server: %v", err)
-	}
+	e.POST("/area/:area_id/user/:user_id", areaAPI.AddUser)
+	e.DELETE("/area/:area_id/user/:user_id", areaAPI.DeleteUser)
+	e.GET("/user/:user_id/list-areas", userAPI.ListAreaByUsers)
+	e.GET("/area/:area_id/list-users", areaAPI.ListUsersByArea)
+
+	e.POST("/user", userAPI.Create)
+	e.PATCH("/user/:id", userAPI.Update)
+	e.GET("/user/:id", userAPI.Read)
+
+	e.Logger.Fatal(e.Start(":8080"))
 }

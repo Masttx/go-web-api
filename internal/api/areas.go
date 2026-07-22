@@ -1,10 +1,11 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"projetoinfiel/internal/repositories"
 	"strconv"
+
+	"github.com/labstack/echo/v4"
 )
 
 type AreaAPI struct {
@@ -50,88 +51,60 @@ type DeleteUserReq struct {
 	UserID int64 `param:"user_id"`
 }
 
-func (r *AreaAPI) Create(writer http.ResponseWriter, request *http.Request) {
+func (r *AreaAPI) Create(c echo.Context) error {
 	req := new(CreateAreaReq)
 
-	err := json.NewDecoder(request.Body).Decode(&req)
+	err := c.Bind(&req)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()})
-
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
+
+	// if err := c.Validate(req); err != nil {
+	// 	return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	// }
 
 	areaCreated, err := r.areaRepository.Create(req.Name, req.Description)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()})
-
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(areaCreated)
+	return c.JSON(http.StatusCreated, areaCreated)
 }
 
-func (r *AreaAPI) Update(writer http.ResponseWriter, request *http.Request) {
+func (r *AreaAPI) Update(c echo.Context) error {
 	req := new(UpdateAreaReq)
 
-	err := json.NewDecoder(request.Body).Decode(&req)
+	err := c.Bind(&req)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()})
-
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
-	idStr := request.PathValue("id")
+	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid area id"})
-
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid area id"})
 	}
 	req.ID = id
 
 	err = r.areaRepository.Update(req.ID, req.Name, req.Description)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()})
-
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(true)
+	return c.JSON(http.StatusCreated, true)
 }
 
-func (r *AreaAPI) Read(writer http.ResponseWriter, request *http.Request) {
-	idStr := request.PathValue("id")
+func (r *AreaAPI) Read(c echo.Context) error {
+	idStr := c.Param("id")
 
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid area id"})
-
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid area id"})
 	}
 
 	user, err := r.areaRepository.Read(id)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()})
-
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	response := ReadAreaResponse{
@@ -140,169 +113,119 @@ func (r *AreaAPI) Read(writer http.ResponseWriter, request *http.Request) {
 		Description: user.Description,
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(response)
+	return c.JSON(http.StatusCreated, response)
 }
 
-func (r *AreaAPI) AddUser(writer http.ResponseWriter, request *http.Request) {
+func (r *AreaAPI) AddUser(c echo.Context) error {
 	req := new(AddUserReq)
 
-	// Try to decode the request body if present
-	err := json.NewDecoder(request.Body).Decode(&req)
-	if err != nil && err.Error() != "EOF" {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid json body: " + err.Error()})
-		return
+	// Bind parameters from URL and JSON body
+	_ = c.Bind(req)
+
+	// Retrieve area_id from URL path fallback
+	if req.AreaID == 0 {
+		areaIDStr := c.Param("area_id")
+		if areaIDStr == "" {
+			areaIDStr = c.Param("id")
+		}
+		if areaIDStr != "" {
+			areaID, err := strconv.ParseInt(areaIDStr, 10, 64)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid area id in URL"})
+			}
+			req.AreaID = areaID
+		}
 	}
 
-	// Retrieve area_id from URL path
-	areaIDStr := request.PathValue("area_id")
-	if areaIDStr == "" {
-		areaIDStr = request.PathValue("id")
-	}
-	if areaIDStr != "" {
-		areaID, err := strconv.ParseInt(areaIDStr, 10, 64)
-		if err != nil {
-			writer.Header().Set("Content-Type", "application/json")
-			writer.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(writer).Encode(map[string]string{"error": "invalid area id in URL"})
-			return
+	// Retrieve user_id from URL path fallback
+	if req.UserID == 0 {
+		userIDStr := c.Param("user_id")
+		if userIDStr != "" {
+			userID, err := strconv.ParseInt(userIDStr, 10, 64)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid user id in URL"})
+			}
+			req.UserID = userID
 		}
-		req.AreaID = areaID
-	}
-
-	// Retrieve user_id from URL path if present
-	userIDStr := request.PathValue("user_id")
-	if userIDStr != "" {
-		userID, err := strconv.ParseInt(userIDStr, 10, 64)
-		if err != nil {
-			writer.Header().Set("Content-Type", "application/json")
-			writer.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(writer).Encode(map[string]string{"error": "invalid user id in URL"})
-			return
-		}
-		req.UserID = userID
 	}
 
 	// Validate inputs
 	if req.AreaID == 0 {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "missing area id"})
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "missing area id"})
 	}
 	if req.UserID == 0 {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "missing user id"})
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "missing user id"})
 	}
 
 	result, err := r.areaUserRepository.Create(req.AreaID, req.UserID)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()})
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(result)
+	return c.JSON(http.StatusCreated, result)
 }
 
-func (r *AreaAPI) ListUsersByArea(writer http.ResponseWriter, request *http.Request) {
-	idStr := request.PathValue("area_id")
+func (r *AreaAPI) ListUsersByArea(c echo.Context) error {
+	idStr := c.Param("area_id")
 
 	area_id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid area id"})
-
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid area id"})
 	}
 
 	users, err := r.areaUserRepository.ListUsersByArea(area_id)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()})
-
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(users)
+	return c.JSON(http.StatusCreated, users)
 }
 
-func (r *AreaAPI) DeleteUser(writer http.ResponseWriter, request *http.Request) {
+func (r *AreaAPI) DeleteUser(c echo.Context) error {
 	req := new(DeleteUserReq)
 
-	// Try to decode the request body if present
-	err := json.NewDecoder(request.Body).Decode(&req)
-	if err != nil && err.Error() != "EOF" {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "invalid json body: " + err.Error()})
-		return
+	// Bind parameters from URL and JSON body
+	_ = c.Bind(req)
+
+	// Retrieve area_id from URL path fallback
+	if req.AreaID == 0 {
+		areaIDStr := c.Param("area_id")
+		if areaIDStr == "" {
+			areaIDStr = c.Param("id")
+		}
+		if areaIDStr != "" {
+			areaID, err := strconv.ParseInt(areaIDStr, 10, 64)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid area id in URL"})
+			}
+			req.AreaID = areaID
+		}
 	}
 
-	// Retrieve area_id from URL path
-	areaIDStr := request.PathValue("area_id")
-	if areaIDStr == "" {
-		areaIDStr = request.PathValue("id")
-	}
-	if areaIDStr != "" {
-		areaID, err := strconv.ParseInt(areaIDStr, 10, 64)
-		if err != nil {
-			writer.Header().Set("Content-Type", "application/json")
-			writer.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(writer).Encode(map[string]string{"error": "invalid area id in URL"})
-			return
+	// Retrieve user_id from URL path fallback
+	if req.UserID == 0 {
+		userIDStr := c.Param("user_id")
+		if userIDStr != "" {
+			userID, err := strconv.ParseInt(userIDStr, 10, 64)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid user id in URL"})
+			}
+			req.UserID = userID
 		}
-		req.AreaID = areaID
-	}
-
-	// Retrieve user_id from URL path if present
-	userIDStr := request.PathValue("user_id")
-	if userIDStr != "" {
-		userID, err := strconv.ParseInt(userIDStr, 10, 64)
-		if err != nil {
-			writer.Header().Set("Content-Type", "application/json")
-			writer.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(writer).Encode(map[string]string{"error": "invalid user id in URL"})
-			return
-		}
-		req.UserID = userID
 	}
 
 	// Validate inputs
 	if req.AreaID == 0 {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "missing area id"})
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "missing area id"})
 	}
 	if req.UserID == 0 {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "missing user id"})
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "missing user id"})
 	}
 
-	err = r.areaUserRepository.Delete(req.AreaID, req.UserID)
+	err := r.areaUserRepository.Delete(req.AreaID, req.UserID)
 	if err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()})
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-	json.NewEncoder(writer).Encode(true)
+	return c.JSON(http.StatusOK, true)
 }
