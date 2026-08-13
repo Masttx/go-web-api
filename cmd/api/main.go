@@ -38,7 +38,10 @@ func main() {
 	e.GET("/user/:user_id/list-areas", userAPI.ListAreaByUsers)
 	e.GET("/area/:area_id/list-users", areaAPI.ListUsersByArea)
 
-	e.POST("/user", userAPI.Create)
+	e.POST("/auth/register", userAPI.Register)
+	e.POST("/auth/login", userAPI.Login)
+
+	//e.POST("/user", userAPI.Create)
 	e.PATCH("/user/:id", userAPI.Update)
 	e.GET("/user/:id", userAPI.Read)
 

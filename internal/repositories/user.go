@@ -1,25 +1,27 @@
 package repositories
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"projetoinfiel/internal/database/queries"
 	"projetoinfiel/internal/types"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type UserRepository struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
+func NewUserRepository(db *sqlx.DB) *UserRepository {
 	return &UserRepository{
 		db: db,
 	}
 }
 
-func (r *UserRepository) Create(name string, email string) (sql.Result, error) {
-	query := "INSERT INTO users (name, email) VALUES (?, ?)"
-
-	result, err := r.db.Exec(query, name, email)
+func (r *UserRepository) Create(name string, email string, password_hash string) (sql.Result, error) {
+	result, err := r.db.Exec(queries.CreateUserQuery, name, email, password_hash)
 	if err != nil {
 		return nil, fmt.Errorf("Error to insert user: %v", err)
 	}
@@ -39,27 +41,33 @@ func (r *UserRepository) Read(id int64) (types.User, error) {
 	return user, nil
 }
 
-func (r *UserRepository) List() ([]types.User, error) {
-	query := "SELECT * FROM users"
-
-	rows, err := r.db.Query(query)
+func (r *UserRepository) ExistsUserByEmail(email string) (bool, error) {
+	var exists bool
+	err := r.db.Get(&exists, queries.ExistsUserByEmailQuery, email)
 	if err != nil {
-		return nil, fmt.Errorf("Error to insert user: %v", err)
-	}
-	defer rows.Close()
-
-	var users []types.User
-	for rows.Next() {
-		var user types.User
-		err = rows.Scan(&user.ID, &user.Name, &user.Email)
-		if err != nil {
-			return nil, fmt.Errorf("Error to scan user: %v", err)
-		}
-
-		users = append(users, user)
+		return false, err
 	}
 
-	return users, nil
+	return exists, nil
+}
+
+func (r *UserRepository) FindUserByEmail(email string) (types.User, error) {
+	var user types.User
+	err := r.db.Get(&user, queries.FindUserByEmailQuery, email)
+	if err != nil {
+		return types.User{}, fmt.Errorf("Error to find user: %v", err)
+	}
+	return user, nil
+}
+
+func (r *UserRepository) List(ctx context.Context) ([]types.User, error) {
+	var result []types.User
+	err := r.db.SelectContext(ctx, &result, queries.ListUsersQuery)
+	if err != nil {
+		return nil, fmt.Errorf("Error to list users: %v", err)
+	}
+
+	return result, nil
 }
 
 func (r *UserRepository) Update(id int64, name string, email string) error {
@@ -116,7 +124,7 @@ func (r *UserRepository) ListByArea(areaId int64) ([]types.User, error) {
 	var users []types.User
 	for rows.Next() {
 		var user types.User
-		err = rows.Scan(&user.ID, &user.Name, &user.Email, &user.AreaID)
+		err = rows.Scan(&user.ID, &user.Name, &user.Email)
 		if err != nil {
 			return nil, fmt.Errorf("Error to scan user: %v", err)
 		}

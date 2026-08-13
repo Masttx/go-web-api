@@ -4,13 +4,15 @@ import (
 	"database/sql"
 	"fmt"
 	"projetoinfiel/internal/types"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type AreaRepository struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
-func NewAreaRepository(db *sql.DB) *AreaRepository {
+func NewAreaRepository(db *sqlx.DB) *AreaRepository {
 	return &AreaRepository{
 		db: db,
 	}

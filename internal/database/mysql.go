@@ -3,45 +3,34 @@ package database
 import (
 	"database/sql"
 	"log"
+	"projetoinfiel/internal/database/queries"
 
+	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 )
 
 type service struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
-func NewMySQLConnection() *sql.DB {
+func NewMySQLConnection() *sqlx.DB {
 	dbPath := "sqlite.db"
 
-	connection, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		panic(err)
-	}
+	connection := sqlx.MustConnect("sqlite", dbPath)
 
 	dbInstance := &service{
 		db: connection,
 	}
 
-	dbInstance.initDatabase()
+	dbInstance.createTable("Areas", queries.CreateAreaQuery)
+	dbInstance.createTable("Users", queries.CreateUserTableQuery)
+	dbInstance.createTable("Area_Users", queries.CreateAreaUserQuery)
 
 	return connection
 }
 
 func (s *service) Close() error {
 	return s.db.Close()
-}
-
-func (s *service) initDatabase() {
-	createAreaQuery := `CREATE TABLE IF NOT EXISTS areas (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,description TEXT)`
-	s.createTable("Areas", createAreaQuery)
-
-	createUserQuery := `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,
-	email TEXT NOT NULL)`
-	s.createTable("Users", createUserQuery)
-
-	createAreaUserQuery := `CREATE TABLE IF NOT EXISTS area_users (area_id INTEGER REFERENCES area(id), user_id INTEGER REFERENCES user(id))`
-	s.createTable("Area_Users", createAreaUserQuery)
 }
 
 func (s *service) createTable(name, createTableQuery string) {

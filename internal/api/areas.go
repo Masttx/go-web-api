@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"projetoinfiel/internal/dto"
 	"projetoinfiel/internal/repositories"
 	"strconv"
 
@@ -20,39 +21,8 @@ func NewAreaAPI(areaRepository repositories.AreaRepository, areaUserRepository r
 	}
 }
 
-type ReadAreaResponse struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type UpdateAreaReq struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type CreateAreaReq struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type AddUserReq struct {
-	AreaID int64 `param:"area_id"`
-	UserID int64 `param:"user_id"`
-}
-
-type ListUsersByAreaReq struct {
-	AreaID int64 `param:"area_id"`
-}
-
-type DeleteUserReq struct {
-	AreaID int64 `param:"area_id"`
-	UserID int64 `param:"user_id"`
-}
-
 func (r *AreaAPI) Create(c echo.Context) error {
-	req := new(CreateAreaReq)
+	req := new(dto.CreateAreaReq)
 
 	err := c.Bind(&req)
 	if err != nil {
@@ -72,7 +42,7 @@ func (r *AreaAPI) Create(c echo.Context) error {
 }
 
 func (r *AreaAPI) Update(c echo.Context) error {
-	req := new(UpdateAreaReq)
+	req := new(dto.UpdateAreaReq)
 
 	err := c.Bind(&req)
 	if err != nil {
@@ -107,7 +77,7 @@ func (r *AreaAPI) Read(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	response := ReadAreaResponse{
+	response := dto.ReadAreaResponse{
 		ID:          user.ID,
 		Name:        user.Name,
 		Description: user.Description,
@@ -117,7 +87,7 @@ func (r *AreaAPI) Read(c echo.Context) error {
 }
 
 func (r *AreaAPI) AddUser(c echo.Context) error {
-	req := new(AddUserReq)
+	req := new(dto.AddUserReq)
 
 	// Bind parameters from URL and JSON body
 	_ = c.Bind(req)
@@ -182,7 +152,7 @@ func (r *AreaAPI) ListUsersByArea(c echo.Context) error {
 }
 
 func (r *AreaAPI) DeleteUser(c echo.Context) error {
-	req := new(DeleteUserReq)
+	req := new(dto.DeleteUserReq)
 
 	// Bind parameters from URL and JSON body
 	_ = c.Bind(req)

@@ -1,0 +1,23 @@
+meta {
+  name: Login
+  type: http
+  seq: 12
+}
+
+post {
+  url: http://localhost:8080/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "usuario@email.com",
+    "password": "senha1234password"
+  }
+}
+​
